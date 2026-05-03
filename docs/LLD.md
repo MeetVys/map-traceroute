@@ -525,7 +525,7 @@ function growProgress(p: PacketState): number {
 
 The actual grown endpoint = `lerp(src, dst, growProgress(p))`.
 
-### 3.7 Arc color (protocol) and height (direction)
+### 3.7 Arc encoding
 
 **Color = protocol:**
 
@@ -536,9 +536,23 @@ The actual grown endpoint = `lerp(src, dst, growProgress(p))`.
 | `icmp` | `[232, 121, 249]` | `#e879f9` magenta |
 | `other` | `[148, 163, 184]` | `#94a3b8` gray |
 
-**Height = direction:** deck.gl `ArcLayer` `getHeight` — `0.8` for outgoing, `0.15` for incoming. Outgoing arcs arch high, incoming arcs stay close to the surface.
+**Height = direction:** deck.gl `ArcLayer` `getHeight` — `0.8` for outgoing, `0.15` for incoming.
 
-Alpha = `alpha(p) * 255` (fade-out still applies).
+**Gradient = direction (fallback):** the source end of each arc is drawn at 60% of the protocol color's brightness; the destination end at 100%. Encoded via `getSourceColor` vs `getTargetColor` on the same `ArcLayer`. Constant, cheap, always on.
+
+**Traveling particle = direction (primary motion cue):** a `ScatterplotLayer` rides on top of the `ArcLayer`. Each live packet produces one dot whose position is sampled along the arc using a repeating progress value:
+
+```
+progress = ((now - addedAt) / PARTICLE_PERIOD_MS) % 1
+position = arcPoint(src, dst, height, progress)
+```
+
+- `PARTICLE_PERIOD_MS = 1000` — one full source→destination traverse per second.
+- Dot radius: `4 px`. Color: the protocol color at full alpha, same fade rule on expiry.
+- The `arcPoint` helper reproduces deck.gl's great-circle arc math (parabolic height ramp `4·h·t·(1-t)` so the dot sits on the visible arc, not the straight line between endpoints).
+- Driven by the same `rAF tick` that already re-renders the `ArcLayer`, so no extra animation loop.
+
+Alpha = `alpha(p) * 255` (fade-out still applies to both the arc and the particle).
 
 The packet list continues to show direction via the `↑ out` / `↓ in` glyph and uses the same protocol palette as a dot next to the proto column.
 

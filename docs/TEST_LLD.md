@@ -286,7 +286,7 @@ Rendered with RTL. Uses the same `PacketState` shape as `App.tsx`.
 | `overflow footer shown above 200` | 250 packets | Exactly 200 rows + one `+ 50 more hidden` footer. |
 | `direction glyph correct` | Packets with `"in"` and `"out"` | Two different glyphs/colors rendered. |
 
-### 4.5a `Map.test.ts` — protocol color + height
+### 4.5a `Map.test.ts` — protocol color + height + direction cues
 
 | Test | Assertion |
 |------|-----------|
@@ -296,7 +296,12 @@ Rendered with RTL. Uses the same `PacketState` shape as `App.tsx`.
 | `protoColor("other")` | returns `PROTO_COLORS.other` |
 | `protoColor("gre")` (unknown) | falls back to `PROTO_COLORS.other` |
 | `colorWithAlpha` color comes from `proto`, not direction | UDP out and UDP in both return the same RGB |
+| `sourceColor` is dimmer than `targetColor` | Each RGB channel of source ≤ target (gradient fallback cue) |
 | `OUT_HEIGHT > IN_HEIGHT` | outgoing arcs arch higher than incoming |
+| `arcPoint` at `t=0` returns source | `arcPoint(src, dst, h, 0) ≈ src` |
+| `arcPoint` at `t=1` returns destination | `arcPoint(src, dst, h, 1) ≈ dst` |
+| `arcPoint` at `t=0.5` is above straight midpoint when `h>0` | height term lifts the mid-point |
+| `particleProgress` loops in `[0,1)` | `((now - addedAt) / period) % 1` stays in range |
 
 ### 4.5 `Map.test.ts` (pure functions only)
 
