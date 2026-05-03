@@ -9,8 +9,8 @@ function packet(overrides: Partial<PacketState> = {}): PacketState {
     direction: "out",
     proto: "tcp",
     length: 100,
-    src: { ip: "1.1.1.1", lat: 0, lng: 0 },
-    dst: { ip: "8.8.8.8", lat: 10, lng: 10 },
+    src: { ip: "1.1.1.1", lat: 0, lng: 0, local: false },
+    dst: { ip: "8.8.8.8", lat: 10, lng: 10, local: false },
     addedAt: 0,
     ...overrides,
   };

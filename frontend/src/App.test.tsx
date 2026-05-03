@@ -66,8 +66,8 @@ describe("App", () => {
         direction: "out",
         proto: "tcp",
         length: 100,
-        src: { ip: "1.1.1.1", lat: 0, lng: 0 },
-        dst: { ip: "8.8.8.8", lat: 10, lng: 10 },
+        src: { ip: "1.1.1.1", lat: 0, lng: 0, local: false },
+        dst: { ip: "8.8.8.8", lat: 10, lng: 10, local: false },
       },
     });
     expect(screen.getByText(/packets: 1/)).toBeInTheDocument();
@@ -107,8 +107,8 @@ describe("App", () => {
           direction: "out",
           proto: "tcp",
           length: 100,
-          src: { ip: "1.1.1.1", lat: 0, lng: 0 },
-          dst: { ip: "8.8.8.8", lat: 10, lng: 10 },
+          src: { ip: "1.1.1.1", lat: 0, lng: 0, local: false },
+          dst: { ip: "8.8.8.8", lat: 10, lng: 10, local: false },
         },
         {
           id: "b",
@@ -116,8 +116,8 @@ describe("App", () => {
           direction: "in",
           proto: "udp",
           length: 64,
-          src: { ip: "8.8.8.8", lat: 10, lng: 10 },
-          dst: { ip: "1.1.1.1", lat: 0, lng: 0 },
+          src: { ip: "8.8.8.8", lat: 10, lng: 10, local: false },
+          dst: { ip: "1.1.1.1", lat: 0, lng: 0, local: false },
         },
       ],
     });

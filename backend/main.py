@@ -14,7 +14,8 @@ from fastapi.staticfiles import StaticFiles
 
 from . import config
 from .capturer import Capturer, RawPacket
-from .geo import GeoResolver
+from .geo import GeoPoint, GeoResolver
+from .public_ip import fetch_public_ip
 from .window import WindowedPacket, WindowManager
 
 # E2E hook: if MT_TEST_MODE=1, swap in a controllable capturer and bypass sudo.
@@ -34,6 +35,7 @@ class Hub:
         self.capturer: Capturer | None = None
         self.raw_queue: asyncio.Queue[RawPacket] | None = None
         self.loop: asyncio.AbstractEventLoop | None = None
+        self.local_geo: GeoPoint | None = None
 
     async def broadcast(self, msg: dict[str, Any]) -> None:
         dead: list[WebSocket] = []
@@ -52,6 +54,16 @@ class Hub:
 hub = Hub()
 
 
+def _resolve_local_geo(geo: GeoResolver) -> GeoPoint | None:
+    if TEST_MODE:
+        # In tests, callers set hub.local_geo directly or rely on public IPs.
+        return None
+    ip = fetch_public_ip()
+    if not ip:
+        return None
+    return geo.resolve(ip)
+
+
 def _packet_to_dto(p: WindowedPacket) -> dict[str, Any]:
     return {
         "id": p.id,
@@ -59,8 +71,14 @@ def _packet_to_dto(p: WindowedPacket) -> dict[str, Any]:
         "direction": p.direction,
         "proto": p.proto,
         "length": p.length,
-        "src": {"ip": p.src_ip, "lat": p.src_lat, "lng": p.src_lng},
-        "dst": {"ip": p.dst_ip, "lat": p.dst_lat, "lng": p.dst_lng},
+        "src": {
+            "ip": p.src_ip, "lat": p.src_lat, "lng": p.src_lng,
+            "city": p.src_city, "country": p.src_country, "local": p.src_local,
+        },
+        "dst": {
+            "ip": p.dst_ip, "lat": p.dst_lat, "lng": p.dst_lng,
+            "city": p.dst_city, "country": p.dst_country, "local": p.dst_local,
+        },
     }
 
 
@@ -82,8 +100,8 @@ async def _drain_queue() -> None:
     assert hub.window is not None
     while True:
         raw = await hub.raw_queue.get()
-        src = hub.geo.resolve(raw.src_ip)
-        dst = hub.geo.resolve(raw.dst_ip)
+        src = hub.local_geo if raw.src_local else hub.geo.resolve(raw.src_ip)
+        dst = hub.local_geo if raw.dst_local else hub.geo.resolve(raw.dst_ip)
         if src is None or dst is None:
             continue
         p = WindowedPacket(
@@ -94,8 +112,14 @@ async def _drain_queue() -> None:
             dst_ip=raw.dst_ip,
             src_lat=src.lat,
             src_lng=src.lng,
+            src_city=src.city,
+            src_country=src.country,
+            src_local=raw.src_local,
             dst_lat=dst.lat,
             dst_lng=dst.lng,
+            dst_city=dst.city,
+            dst_country=dst.country,
+            dst_local=raw.dst_local,
             proto=raw.proto,
             length=raw.length,
         )
@@ -122,6 +146,16 @@ async def lifespan(app: FastAPI):
     else:
         hub.capturer = Capturer(on_packet=_on_raw_packet)
     hub.raw_queue = asyncio.Queue(maxsize=5000)
+    # Resolve the user's public IP once so LAN-side packets still render.
+    hub.local_geo = _resolve_local_geo(hub.geo)
+    if hub.local_geo is None:
+        log.warning("could not determine local geo — local-side packets will be dropped")
+    else:
+        log.info(
+            "local geo: %s, %s (%.2f, %.2f)",
+            hub.local_geo.city, hub.local_geo.country,
+            hub.local_geo.lat, hub.local_geo.lng,
+        )
     expiry_task = asyncio.create_task(hub.window.run_expiry())
     drain_task = asyncio.create_task(_drain_queue())
     log.info("server ready on port %d (root=%s)", config.PORT, os.geteuid() == 0)

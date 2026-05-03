@@ -22,6 +22,8 @@ def test_outbound_tcp():
     assert got[0].proto == "tcp"
     assert got[0].src_ip == "192.168.1.10"
     assert got[0].dst_ip == "1.1.1.1"
+    assert got[0].src_local is True
+    assert got[0].dst_local is False
 
 
 def test_inbound_udp():
@@ -30,6 +32,8 @@ def test_inbound_udp():
     assert len(got) == 1
     assert got[0].direction == "in"
     assert got[0].proto == "udp"
+    assert got[0].src_local is False
+    assert got[0].dst_local is True
 
 
 def test_loopback_dropped():

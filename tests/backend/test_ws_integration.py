@@ -113,8 +113,10 @@ def test_packet_broadcast(client):
         cap.inject(
             RawPacket(
                 ts=time.time(),
-                src_ip="192.168.1.10",  # private — will be dropped by geo
+                src_ip="192.168.1.10",
                 dst_ip="1.1.1.1",
+                src_local=False,  # pretend we haven't set local_geo
+                dst_local=False,
                 direction="out",
                 proto="tcp",
                 length=100,
@@ -126,6 +128,8 @@ def test_packet_broadcast(client):
                 ts=time.time(),
                 src_ip="8.8.8.8",
                 dst_ip="1.1.1.1",
+                src_local=False,
+                dst_local=False,
                 direction="in",
                 proto="tcp",
                 length=100,
@@ -136,6 +140,47 @@ def test_packet_broadcast(client):
         assert msg["data"]["dst"]["ip"] == "1.1.1.1"
         assert msg["data"]["src"]["lat"] == 37.39
         assert msg["data"]["dst"]["lng"] == -122.41
+        assert msg["data"]["src"]["city"] == "Mountain View"
+        assert msg["data"]["dst"]["city"] == "San Francisco"
+        assert msg["data"]["src"]["country"] == "US"
+        assert msg["data"]["src"]["local"] is False
+        assert msg["data"]["dst"]["local"] is False
+
+
+def test_local_side_uses_local_geo(client):
+    from backend.geo import GeoPoint
+    from backend import main as main_module
+
+    main_module.hub.local_geo = GeoPoint(10.0, 20.0, "Home", "US")
+    try:
+        with client.websocket_connect("/ws") as ws:
+            ws.receive_json()
+            ws.receive_json()
+            ws.send_json({"type": "start"})
+            _recv_until(ws, "status")
+
+            cap = _get_fake_capturer()
+            cap.inject(
+                RawPacket(
+                    ts=time.time(),
+                    src_ip="192.168.1.10",
+                    dst_ip="1.1.1.1",
+                    src_local=True,
+                    dst_local=False,
+                    direction="out",
+                    proto="tcp",
+                    length=100,
+                )
+            )
+            msg = _recv_until(ws, "packet")
+            assert msg["data"]["src"]["local"] is True
+            assert msg["data"]["src"]["city"] == "Home"
+            assert msg["data"]["src"]["lat"] == 10.0
+            assert msg["data"]["src"]["lng"] == 20.0
+            assert msg["data"]["dst"]["local"] is False
+            assert msg["data"]["dst"]["city"] == "San Francisco"
+    finally:
+        main_module.hub.local_geo = None
 
 
 def test_packet_unknown_ip_dropped(client):
@@ -149,8 +194,10 @@ def test_packet_unknown_ip_dropped(client):
         cap.inject(
             RawPacket(
                 ts=time.time(),
-                src_ip="203.0.113.5",  # unknown
+                src_ip="203.0.113.5",
                 dst_ip="1.1.1.1",
+                src_local=False,
+                dst_local=False,
                 direction="in",
                 proto="tcp",
                 length=100,

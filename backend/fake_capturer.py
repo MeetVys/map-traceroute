@@ -48,11 +48,14 @@ class FakeCapturer:
             elapsed = time.time() - start
             if delay > elapsed:
                 time.sleep(delay - elapsed)
+            direction = rec["direction"]
             raw = RawPacket(
                 ts=time.time(),
                 src_ip=rec["src_ip"],
                 dst_ip=rec["dst_ip"],
-                direction=rec["direction"],
+                src_local=bool(rec.get("src_local", direction == "out")),
+                dst_local=bool(rec.get("dst_local", direction == "in")),
+                direction=direction,
                 proto=rec["proto"],
                 length=int(rec["length"]),
             )

@@ -16,8 +16,14 @@ class WindowedPacket:
     dst_ip: str
     src_lat: float
     src_lng: float
+    src_city: str | None
+    src_country: str | None
+    src_local: bool
     dst_lat: float
     dst_lng: float
+    dst_city: str | None
+    dst_country: str | None
+    dst_local: bool
     proto: str
     length: int
 

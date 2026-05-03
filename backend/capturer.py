@@ -21,6 +21,8 @@ class RawPacket:
     ts: float
     src_ip: str
     dst_ip: str
+    src_local: bool
+    dst_local: bool
     direction: str  # "in" | "out"
     proto: str
     length: int
@@ -111,6 +113,8 @@ class Capturer:
             ts=time.time(),
             src_ip=src,
             dst_ip=dst,
+            src_local=src_local,
+            dst_local=dst_local,
             direction=direction,
             proto=proto,
             length=length,

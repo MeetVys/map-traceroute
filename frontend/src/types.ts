@@ -4,8 +4,9 @@ export type GeoRef = {
   ip: string;
   lat: number;
   lng: number;
-  city?: string;
-  country?: string;
+  city?: string | null;
+  country?: string | null;
+  local: boolean;
 };
 
 export type PacketDTO = {

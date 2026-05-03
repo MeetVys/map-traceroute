@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Controls } from "./Controls";
 import { MapView, type PacketState } from "./Map";
+import { PacketList } from "./PacketList";
 import { WSClient } from "./ws";
 import type { PacketDTO, ServerMsg } from "./types";
 
@@ -66,7 +67,10 @@ export function App() {
 
   return (
     <>
-      <MapView packets={packetsRef.current} />
+      <div style={{ position: "absolute", inset: "0 0 240px 0" }}>
+        <MapView packets={packetsRef.current} />
+      </div>
+      <PacketList packets={packetsRef.current} />
       <Controls
         capturing={capturing}
         packetCount={packetsRef.current.size}
