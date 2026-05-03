@@ -286,6 +286,26 @@ Rendered with RTL. Uses the same `PacketState` shape as `App.tsx`.
 | `overflow footer shown above 200` | 250 packets | Exactly 200 rows + one `+ 50 more hidden` footer. |
 | `direction glyph correct` | Packets with `"in"` and `"out"` | Two different glyphs/colors rendered. |
 
+### 4.4a `theme.test.ts` + `ThemePicker.test.tsx`
+
+**`theme.test.ts`:**
+
+| Test | Assertion |
+|------|-----------|
+| `all three themes exist` | `themes.console`, `themes.space`, `themes.paper` defined. |
+| `every theme has the full token set` | Each theme has `bg`, `land`, `landBorder`, `panel`, `text`, `accent`, `proto.{tcp,udp,icmp,other}`. |
+| `modes are correct` | Console and Space = `dark`; Paper = `light`. |
+
+**`ThemePicker.test.tsx`:**
+
+| Test | Assertion |
+|------|-----------|
+| `renders three options` | Select has three `<option>` children. |
+| `default selection is console` | Active value is `console` when no localStorage. |
+| `changing selection updates localStorage` | After `change`, `localStorage.mt.theme` equals new id. |
+| `changing selection sets CSS vars on <html>` | `document.documentElement.style.getPropertyValue("--bg")` matches new theme's `bg`. |
+| `reading from localStorage on mount restores theme` | Pre-populate `mt.theme = "paper"` → Picker shows `paper`. |
+
 ### 4.5a `Map.test.ts` — protocol color + height
 
 | Test | Assertion |

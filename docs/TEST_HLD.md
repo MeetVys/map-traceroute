@@ -50,6 +50,8 @@ Pure-logic tests, no sockets, no root, no real `.mmdb`.
 | `Map.tsx` | `colorWithAlpha` ramps 1→0 over fade window. `lerp` endpoints during grow. |
 | `PacketList.tsx` | Renders one row per packet. Newest on top. `(local)` label used when `local: true`. `"city, country"` used otherwise. Row disappears when packet leaves the map. Row count capped at 200 with overflow footer. |
 | `PacketRow.tsx` | Memoization: rerender only on `expiredAt` change or age-bucket change. Direction glyph + color correct. Missing city/country falls back to `Unknown`. |
+| `theme.ts` | Three themes exist with non-empty tokens. All `proto` palette keys present for each theme. |
+| `ThemePicker.tsx` | Renders three options, current selection reflected. Selecting writes to localStorage and updates CSS vars on `<html>`. |
 
 ### Integration — backend
 

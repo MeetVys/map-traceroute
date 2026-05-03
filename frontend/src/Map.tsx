@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import DeckGL from "@deck.gl/react";
 import { ArcLayer, GeoJsonLayer } from "@deck.gl/layers";
 import type { PacketDTO } from "./types";
+import { useTheme, type Theme } from "./theme";
 
 export type PacketState = PacketDTO & { addedAt: number; expiredAt?: number };
 
@@ -42,6 +43,7 @@ export function lerp(a: number, b: number, t: number): number {
 export const FADE_WINDOW_MS = FADE_MS;
 
 export function MapView({ packets }: Props) {
+  const theme = useTheme();
   const [tick, setTick] = useState(0);
   const raf = useRef<number | null>(null);
 
@@ -71,9 +73,13 @@ export function MapView({ packets }: Props) {
     data: countries ?? { type: "FeatureCollection", features: [] },
     stroked: true,
     filled: true,
-    getFillColor: [20, 25, 40],
-    getLineColor: [60, 70, 90],
+    getFillColor: theme.land,
+    getLineColor: theme.landBorder,
     lineWidthMinPixels: 0.5,
+    updateTriggers: {
+      getFillColor: theme.id,
+      getLineColor: theme.id,
+    },
   });
 
   const now = performance.now();
@@ -86,14 +92,14 @@ export function MapView({ packets }: Props) {
       const grow = Math.min(1, (now - p.addedAt) / GROW_MS);
       return [lerp(p.src.lng, p.dst.lng, grow), lerp(p.src.lat, p.dst.lat, grow)];
     },
-    getSourceColor: (p) => colorWithAlpha(p, now),
-    getTargetColor: (p) => colorWithAlpha(p, now),
+    getSourceColor: (p) => colorWithAlpha(p, now, theme),
+    getTargetColor: (p) => colorWithAlpha(p, now, theme),
     getHeight: (p) => (p.direction === "out" ? OUT_HEIGHT : IN_HEIGHT),
     getWidth: 2,
     updateTriggers: {
       getTargetPosition: tick,
-      getSourceColor: tick,
-      getTargetColor: tick,
+      getSourceColor: [tick, theme.id],
+      getTargetColor: [tick, theme.id],
       getHeight: tick,
     },
   });
@@ -121,8 +127,15 @@ export function MapView({ packets }: Props) {
   );
 }
 
-export function colorWithAlpha(p: PacketState, now: number): [number, number, number, number] {
-  const base = protoColor(p.proto);
+export function colorWithAlpha(
+  p: PacketState,
+  now: number,
+  theme?: Theme,
+): [number, number, number, number] {
+  const key = (p.proto as keyof typeof PROTO_COLORS) in PROTO_COLORS
+    ? (p.proto as keyof typeof PROTO_COLORS)
+    : "other";
+  const base = theme ? theme.proto[key] : PROTO_COLORS[key];
   let a = 1;
   if (p.expiredAt !== undefined) {
     a = Math.max(0, 1 - (now - p.expiredAt) / FADE_MS);

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { PacketState } from "./Map";
 import { PacketRow } from "./PacketRow";
+import { useTheme } from "./theme";
 
 const MAX_ROWS = 200;
 
@@ -9,6 +10,7 @@ type Props = {
 };
 
 export function PacketList({ packets }: Props) {
+  const theme = useTheme();
   const [now, setNow] = useState(() => performance.now());
 
   useEffect(() => {
@@ -33,11 +35,11 @@ export function PacketList({ packets }: Props) {
         right: 0,
         bottom: 0,
         height: 240,
-        background: "rgba(8, 12, 24, 0.9)",
-        color: "#eee",
+        background: "var(--panel)",
+        color: "var(--text)",
         fontFamily: "system-ui, sans-serif",
         zIndex: 20,
-        borderTop: "1px solid #2a3048",
+        borderTop: "1px solid var(--panel-border)",
         display: "flex",
         flexDirection: "column",
       }}
@@ -49,11 +51,11 @@ export function PacketList({ packets }: Props) {
           justifyContent: "space-between",
           alignItems: "center",
           fontSize: 13,
-          borderBottom: "1px solid #2a3048",
+          borderBottom: "1px solid var(--panel-border)",
         }}
       >
         <span>Live packets (last 5s)</span>
-        <span style={{ opacity: 0.7 }} data-testid="packet-count">
+        <span style={{ color: "var(--text-muted)" }} data-testid="packet-count">
           {sorted.length} active
         </span>
       </div>
@@ -69,11 +71,11 @@ export function PacketList({ packets }: Props) {
             style={{
               position: "sticky",
               top: 0,
-              background: "#11182a",
-              opacity: 0.95,
+              background: "var(--panel)",
+              borderBottom: "1px solid var(--panel-border)",
             }}
           >
-            <tr style={{ textAlign: "left", opacity: 0.7 }}>
+            <tr style={{ textAlign: "left", color: "var(--text-muted)" }}>
               <th style={{ padding: "6px 8px" }}>dir</th>
               <th style={{ padding: "6px 8px" }}>source</th>
               <th style={{ padding: "6px 8px" }}>destination</th>
@@ -84,13 +86,13 @@ export function PacketList({ packets }: Props) {
           </thead>
           <tbody data-testid="packet-list-body">
             {visible.map((p) => (
-              <PacketRow key={p.id} packet={p} now={now} />
+              <PacketRow key={p.id} packet={p} now={now} theme={theme} />
             ))}
           </tbody>
         </table>
         {hidden > 0 && (
           <div
-            style={{ padding: "6px 14px", fontSize: 12, opacity: 0.6 }}
+            style={{ padding: "6px 14px", fontSize: 12, color: "var(--text-muted)" }}
             data-testid="overflow-footer"
           >
             + {hidden} more hidden

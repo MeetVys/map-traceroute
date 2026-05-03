@@ -1,12 +1,14 @@
 import { memo } from "react";
 import type { GeoRef } from "./types";
 import { type PacketState, protoColor } from "./Map";
+import type { Theme } from "./theme";
 
 const FADE_MS = 500;
 
 type Props = {
   packet: PacketState;
   now: number;
+  theme?: Theme;
 };
 
 function fmtLocation(g: GeoRef): string {
@@ -15,10 +17,11 @@ function fmtLocation(g: GeoRef): string {
   return [g.city, g.country].filter(Boolean).join(", ");
 }
 
-function dirGlyph(direction: "in" | "out"): { sym: string; color: string } {
-  return direction === "out"
-    ? { sym: "↑ out", color: "#50c8ff" }
-    : { sym: "↓ in", color: "#ffa050" };
+function dirGlyph(direction: "in" | "out", theme?: Theme): { sym: string; color: string } {
+  if (direction === "out") {
+    return { sym: "↑ out", color: theme?.accent ?? "#50c8ff" };
+  }
+  return { sym: "↓ in", color: theme?.textMuted ?? "#ffa050" };
 }
 
 function opacityFor(p: PacketState, now: number): number {
@@ -27,10 +30,13 @@ function opacityFor(p: PacketState, now: number): number {
   return Math.max(0, 1 - t);
 }
 
-function PacketRowInner({ packet, now }: Props) {
+function PacketRowInner({ packet, now, theme }: Props) {
   const age = ((now - packet.addedAt) / 1000).toFixed(1);
-  const glyph = dirGlyph(packet.direction);
+  const glyph = dirGlyph(packet.direction, theme);
   const opacity = opacityFor(packet, now);
+  const dotColor = theme
+    ? `rgb(${theme.proto[(packet.proto as keyof typeof theme.proto) in theme.proto ? (packet.proto as keyof typeof theme.proto) : "other"].join(",")})`
+    : `rgb(${protoColor(packet.proto).join(",")})`;
 
   return (
     <tr style={{ opacity, transition: "opacity 0.1s linear" }}>
@@ -54,7 +60,7 @@ function PacketRowInner({ packet, now }: Props) {
             height: 8,
             borderRadius: "50%",
             marginRight: 6,
-            background: `rgb(${protoColor(packet.proto).join(",")})`,
+            background: dotColor,
             verticalAlign: "middle",
           }}
         />
@@ -69,6 +75,7 @@ function PacketRowInner({ packet, now }: Props) {
 export const PacketRow = memo(PacketRowInner, (prev, next) => {
   if (prev.packet.id !== next.packet.id) return false;
   if (prev.packet.expiredAt !== next.packet.expiredAt) return false;
+  if (prev.theme?.id !== next.theme?.id) return false;
   const prevBucket = Math.floor((prev.now - prev.packet.addedAt) / 250);
   const nextBucket = Math.floor((next.now - next.packet.addedAt) / 250);
   return prevBucket === nextBucket;

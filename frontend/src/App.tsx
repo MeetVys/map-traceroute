@@ -1,9 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Controls } from "./Controls";
 import { MapView, type PacketState } from "./Map";
 import { PacketList } from "./PacketList";
 import { WSClient } from "./ws";
 import type { PacketDTO, ServerMsg } from "./types";
+import {
+  ThemeContext,
+  applyThemeToRoot,
+  resolveInitialTheme,
+  themes,
+  STORAGE_KEY,
+  type ThemeId,
+} from "./theme";
 
 const FADE_MS = 500;
 
@@ -16,8 +24,25 @@ export function App() {
   const [capturing, setCapturing] = useState(false);
   const [error, setError] = useState<string | undefined>();
   const [, setRenderTick] = useState(0);
+  const [themeId, setThemeId] = useState<ThemeId>(() => resolveInitialTheme());
   const packetsRef = useRef<Map<string, PacketState>>(new Map());
   const wsRef = useRef<WSClient | null>(null);
+
+  const theme = themes[themeId];
+
+  useEffect(() => {
+    applyThemeToRoot(theme);
+    try {
+      window.localStorage?.setItem(STORAGE_KEY, themeId);
+    } catch {
+      /* ignore */
+    }
+  }, [themeId, theme]);
+
+  const themeCtx = useMemo(
+    () => ({ theme, setThemeId }),
+    [theme]
+  );
 
   useEffect(() => {
     const ws = new WSClient(wsUrl());
@@ -66,7 +91,7 @@ export function App() {
   const onStop = () => wsRef.current?.send({ type: "stop" });
 
   return (
-    <>
+    <ThemeContext.Provider value={themeCtx}>
       <div style={{ position: "absolute", inset: "0 0 240px 0" }}>
         <MapView packets={packetsRef.current} />
       </div>
@@ -93,7 +118,7 @@ export function App() {
           {error}
         </div>
       )}
-    </>
+    </ThemeContext.Provider>
   );
 }
 

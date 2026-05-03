@@ -41,6 +41,15 @@ The computer is constantly sending and receiving packets. The app captures these
 - If a source or destination is the user's own machine, the location column shows `(local)` instead of a city.
 - Only routable packets are listed — same stream that appears on the map.
 
+### Themes
+
+- The UI ships with **three themes** the user can switch between at runtime:
+  - **Console at night** — calm dark theme with GitHub-like panels. Default.
+  - **Space map** — deep blue-black background, saturated arcs, "control room" feel.
+  - **Topographic paper** — light theme, warm off-white, muted navy/forest/raspberry arcs.
+- A **theme dropdown** sits in the controls panel (top-left). Selecting a theme applies it immediately to the map, packet list, and controls.
+- The choice is **persisted** in the browser (localStorage). Next visit starts with the user's last theme.
+
 ## How the user runs it
 
 This is a **local tool**. The user clones the GitHub repo and runs it on their own machine.

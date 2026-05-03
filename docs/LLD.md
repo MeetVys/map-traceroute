@@ -37,6 +37,8 @@ map-traceroute/
 │       ├── Controls.tsx
 │       ├── PacketList.tsx
 │       ├── PacketRow.tsx
+│       ├── ThemePicker.tsx
+│       ├── theme.ts
 │       ├── ws.ts
 │       └── types.ts
 └── data/
@@ -582,6 +584,62 @@ type Props = {
   tick: number;   // re-render trigger from App's rAF loop
 };
 ```
+
+### 3.9a Themes — `theme.ts` and `ThemePicker.tsx`
+
+Three themes ship with the app. Each is a **token object** describing colors only; layout and component structure are shared.
+
+```ts
+export type ThemeId = "console" | "space" | "paper";
+
+export type Theme = {
+  id: ThemeId;
+  label: string;
+  mode: "dark" | "light";
+  // Surfaces
+  bg: string;
+  land: [number, number, number];      // deck.gl RGB
+  landBorder: [number, number, number];
+  panel: string;
+  panelBorder: string;
+  // Text
+  text: string;
+  textMuted: string;
+  accent: string;
+  // Arc palette (same keys as PROTO_COLORS today)
+  proto: {
+    tcp: [number, number, number];
+    udp: [number, number, number];
+    icmp: [number, number, number];
+    other: [number, number, number];
+  };
+};
+
+export const themes: Record<ThemeId, Theme> = { ... };
+```
+
+**Flow of tokens:**
+
+```
+ThemePicker  --(setTheme)-->  ThemeContext
+                                   │
+                          ┌────────┴────────┐
+                          ▼                 ▼
+              CSS variables on <html>   useTheme() hook
+                (for CSS-styled        (for deck.gl layers
+                 components)            and inline styles)
+```
+
+- A single React context `ThemeContext` holds `{ theme, setTheme }`.
+- On mount: read `localStorage.getItem("mt.theme")`; fall back to `prefers-color-scheme` (`light` → `paper`, dark → `console`); write back on change.
+- On every theme change, a `useEffect` writes every token to `document.documentElement.style.setProperty("--<name>", value)` so plain CSS consumers (`PacketList`, `Controls`) update automatically.
+- `MapView` reads `theme.land`, `theme.landBorder`, and `theme.proto[*]` directly from the hook; its `GeoJsonLayer`/`ArcLayer` `updateTriggers` include `theme.id` so layers rebuild on switch.
+
+**`ThemePicker` UI:**
+
+- Native `<select>` (smallest surface, fully accessible, keyboard friendly), styled with CSS vars to match whichever theme is active.
+- Lives in the controls panel, immediately above Start/Stop.
+- Three options: "Console at night", "Space map", "Topographic paper".
 
 ### 3.10 `PacketRow.tsx`
 

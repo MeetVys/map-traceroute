@@ -111,10 +111,10 @@ describe("PacketList", () => {
     );
     const dots = screen.getAllByTestId("proto-dot");
     expect(dots).toHaveLength(3);
-    // newest first: icmp, udp, tcp
-    expect((dots[0] as HTMLElement).style.background).toMatch(/232,\s*121,\s*249/);
-    expect((dots[1] as HTMLElement).style.background).toMatch(/74,\s*222,\s*128/);
-    expect((dots[2] as HTMLElement).style.background).toMatch(/74,\s*158,\s*255/);
+    // newest first: icmp, udp, tcp — colors come from the default (console) theme
+    expect((dots[0] as HTMLElement).style.background).toMatch(/210,\s*168,\s*255/);
+    expect((dots[1] as HTMLElement).style.background).toMatch(/63,\s*185,\s*80/);
+    expect((dots[2] as HTMLElement).style.background).toMatch(/88,\s*166,\s*255/);
   });
 
   it("expired packet row fades", () => {
