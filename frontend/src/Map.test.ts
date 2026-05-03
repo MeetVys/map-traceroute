@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { lerp, colorWithAlpha, FADE_WINDOW_MS, OUT_COLOR, IN_COLOR } from "./Map";
+import {
+  lerp,
+  colorWithAlpha,
+  protoColor,
+  FADE_WINDOW_MS,
+  PROTO_COLORS,
+  OUT_HEIGHT,
+  IN_HEIGHT,
+} from "./Map";
 import type { PacketState } from "./Map";
 
 function packet(overrides: Partial<PacketState> = {}): PacketState {
@@ -26,17 +34,27 @@ describe("lerp", () => {
   });
 });
 
+describe("protoColor", () => {
+  it("tcp", () => expect(protoColor("tcp")).toEqual(PROTO_COLORS.tcp));
+  it("udp", () => expect(protoColor("udp")).toEqual(PROTO_COLORS.udp));
+  it("icmp", () => expect(protoColor("icmp")).toEqual(PROTO_COLORS.icmp));
+  it("other", () => expect(protoColor("other")).toEqual(PROTO_COLORS.other));
+  it("unknown proto falls back to other", () =>
+    expect(protoColor("gre")).toEqual(PROTO_COLORS.other));
+});
+
 describe("colorWithAlpha", () => {
-  it("no expiredAt = full alpha + out color", () => {
-    const c = colorWithAlpha(packet({ direction: "out" }), 100);
-    expect(c.slice(0, 3)).toEqual(OUT_COLOR);
+  it("full alpha, color comes from proto (tcp)", () => {
+    const c = colorWithAlpha(packet({ proto: "tcp" }), 100);
+    expect(c.slice(0, 3)).toEqual(PROTO_COLORS.tcp);
     expect(c[3]).toBe(255);
   });
 
-  it("no expiredAt = full alpha + in color", () => {
-    const c = colorWithAlpha(packet({ direction: "in" }), 100);
-    expect(c.slice(0, 3)).toEqual(IN_COLOR);
-    expect(c[3]).toBe(255);
+  it("udp color independent of direction", () => {
+    const out = colorWithAlpha(packet({ proto: "udp", direction: "out" }), 100);
+    const inc = colorWithAlpha(packet({ proto: "udp", direction: "in" }), 100);
+    expect(out.slice(0, 3)).toEqual(PROTO_COLORS.udp);
+    expect(inc.slice(0, 3)).toEqual(PROTO_COLORS.udp);
   });
 
   it("mid-fade alpha ≈ 128", () => {
@@ -50,5 +68,11 @@ describe("colorWithAlpha", () => {
     const now = 1000;
     const c = colorWithAlpha(packet({ expiredAt: now - FADE_WINDOW_MS - 100 }), now);
     expect(c[3]).toBe(0);
+  });
+});
+
+describe("heights", () => {
+  it("out > in", () => {
+    expect(OUT_HEIGHT).toBeGreaterThan(IN_HEIGHT);
   });
 });

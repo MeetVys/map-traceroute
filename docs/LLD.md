@@ -525,11 +525,22 @@ function growProgress(p: PacketState): number {
 
 The actual grown endpoint = `lerp(src, dst, growProgress(p))`.
 
-### 3.7 Colors
+### 3.7 Arc color (protocol) and height (direction)
 
-- Outgoing (`out`): `[80, 200, 255]` — cyan.
-- Incoming (`in`):  `[255, 160, 80]` — amber.
-- Alpha = `alpha(p) * 255`.
+**Color = protocol:**
+
+| Proto | RGB | Hex |
+|-------|-----|-----|
+| `tcp` | `[74, 158, 255]` | `#4a9eff` blue |
+| `udp` | `[74, 222, 128]` | `#4ade80` green |
+| `icmp` | `[232, 121, 249]` | `#e879f9` magenta |
+| `other` | `[148, 163, 184]` | `#94a3b8` gray |
+
+**Height = direction:** deck.gl `ArcLayer` `getHeight` — `0.8` for outgoing, `0.15` for incoming. Outgoing arcs arch high, incoming arcs stay close to the surface.
+
+Alpha = `alpha(p) * 255` (fade-out still applies).
+
+The packet list continues to show direction via the `↑ out` / `↓ in` glyph and uses the same protocol palette as a dot next to the proto column.
 
 ### 3.8 Performance caps
 

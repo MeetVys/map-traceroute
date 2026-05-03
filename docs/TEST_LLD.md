@@ -286,6 +286,18 @@ Rendered with RTL. Uses the same `PacketState` shape as `App.tsx`.
 | `overflow footer shown above 200` | 250 packets | Exactly 200 rows + one `+ 50 more hidden` footer. |
 | `direction glyph correct` | Packets with `"in"` and `"out"` | Two different glyphs/colors rendered. |
 
+### 4.5a `Map.test.ts` — protocol color + height
+
+| Test | Assertion |
+|------|-----------|
+| `protoColor("tcp")` | returns `PROTO_COLORS.tcp` |
+| `protoColor("udp")` | returns `PROTO_COLORS.udp` |
+| `protoColor("icmp")` | returns `PROTO_COLORS.icmp` |
+| `protoColor("other")` | returns `PROTO_COLORS.other` |
+| `protoColor("gre")` (unknown) | falls back to `PROTO_COLORS.other` |
+| `colorWithAlpha` color comes from `proto`, not direction | UDP out and UDP in both return the same RGB |
+| `OUT_HEIGHT > IN_HEIGHT` | outgoing arcs arch higher than incoming |
+
 ### 4.5 `Map.test.ts` (pure functions only)
 
 Only the helpers — deck.gl render is not tested (WebGL in jsdom is not useful).

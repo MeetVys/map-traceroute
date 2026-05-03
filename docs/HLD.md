@@ -14,7 +14,7 @@ Everything runs on the user's machine. There are three parts: a **packet capture
 | **Geo resolver** | Turns an IP into `{lat, lng, city, country}`. Uses a local IP-to-geo database so no external calls are made. |
 | **Window manager** | Holds captured packets in memory. Drops anything older than 5 seconds. Runs continuously after Start — does not stop when capture stops. |
 | **Web server** | Serves the UI and streams packet events to the browser over WebSocket. Exposes `start` and `stop` controls. |
-| **Browser UI** | Renders the world map (arcs) **and a live packet list** below it, both driven by the same packet stream. Start / Stop buttons. |
+| **Browser UI** | Renders the world map (arcs colored by protocol, height by direction) **and a live packet list** below it, both driven by the same packet stream. Start / Stop buttons. |
 
 ## Data flow
 

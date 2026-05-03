@@ -1,6 +1,6 @@
 import { memo } from "react";
 import type { GeoRef } from "./types";
-import type { PacketState } from "./Map";
+import { type PacketState, protoColor } from "./Map";
 
 const FADE_MS = 500;
 
@@ -45,7 +45,21 @@ function PacketRowInner({ packet, now }: Props) {
         <div>{packet.dst.ip}</div>
         <div style={{ opacity: 0.6, fontSize: 11 }}>{fmtLocation(packet.dst)}</div>
       </td>
-      <td style={{ padding: "4px 8px", opacity: 0.8 }}>{packet.proto}</td>
+      <td style={{ padding: "4px 8px", opacity: 0.9 }}>
+        <span
+          data-testid="proto-dot"
+          style={{
+            display: "inline-block",
+            width: 8,
+            height: 8,
+            borderRadius: "50%",
+            marginRight: 6,
+            background: `rgb(${protoColor(packet.proto).join(",")})`,
+            verticalAlign: "middle",
+          }}
+        />
+        {packet.proto}
+      </td>
       <td style={{ padding: "4px 8px", opacity: 0.8, textAlign: "right" }}>{packet.length}</td>
       <td style={{ padding: "4px 8px", opacity: 0.8, textAlign: "right" }}>{age}s</td>
     </tr>

@@ -12,8 +12,20 @@ type Props = {
 const GROW_MS = 400;
 const FADE_MS = 500;
 
-const OUT = [80, 200, 255] as [number, number, number];
-const IN = [255, 160, 80] as [number, number, number];
+export const PROTO_COLORS = {
+  tcp: [74, 158, 255],
+  udp: [74, 222, 128],
+  icmp: [232, 121, 249],
+  other: [148, 163, 184],
+} as const satisfies Record<string, [number, number, number]>;
+
+export const OUT_HEIGHT = 0.8;
+export const IN_HEIGHT = 0.15;
+
+export function protoColor(proto: string): [number, number, number] {
+  const key = (proto as keyof typeof PROTO_COLORS) in PROTO_COLORS ? (proto as keyof typeof PROTO_COLORS) : "other";
+  return PROTO_COLORS[key] as [number, number, number];
+}
 
 const INITIAL_VIEW = {
   longitude: 0,
@@ -28,8 +40,6 @@ export function lerp(a: number, b: number, t: number): number {
 }
 
 export const FADE_WINDOW_MS = FADE_MS;
-export const OUT_COLOR = OUT;
-export const IN_COLOR = IN;
 
 export function MapView({ packets }: Props) {
   const [tick, setTick] = useState(0);
@@ -78,12 +88,13 @@ export function MapView({ packets }: Props) {
     },
     getSourceColor: (p) => colorWithAlpha(p, now),
     getTargetColor: (p) => colorWithAlpha(p, now),
-    getHeight: 0.4,
+    getHeight: (p) => (p.direction === "out" ? OUT_HEIGHT : IN_HEIGHT),
     getWidth: 2,
     updateTriggers: {
       getTargetPosition: tick,
       getSourceColor: tick,
       getTargetColor: tick,
+      getHeight: tick,
     },
   });
 
@@ -111,7 +122,7 @@ export function MapView({ packets }: Props) {
 }
 
 export function colorWithAlpha(p: PacketState, now: number): [number, number, number, number] {
-  const base = p.direction === "out" ? OUT : IN;
+  const base = protoColor(p.proto);
   let a = 1;
   if (p.expiredAt !== undefined) {
     a = Math.max(0, 1 - (now - p.expiredAt) / FADE_MS);

@@ -99,6 +99,24 @@ describe("PacketList", () => {
     expect(screen.getByText("↓ in")).toBeInTheDocument();
   });
 
+  it("proto color dot matches protocol", () => {
+    render(
+      <PacketList
+        packets={toMap([
+          mk({ id: "a", ts: 1, proto: "tcp" }),
+          mk({ id: "b", ts: 2, proto: "udp" }),
+          mk({ id: "c", ts: 3, proto: "icmp" }),
+        ])}
+      />
+    );
+    const dots = screen.getAllByTestId("proto-dot");
+    expect(dots).toHaveLength(3);
+    // newest first: icmp, udp, tcp
+    expect((dots[0] as HTMLElement).style.background).toMatch(/232,\s*121,\s*249/);
+    expect((dots[1] as HTMLElement).style.background).toMatch(/74,\s*222,\s*128/);
+    expect((dots[2] as HTMLElement).style.background).toMatch(/74,\s*158,\s*255/);
+  });
+
   it("expired packet row fades", () => {
     const now = performance.now();
     const p = mk({ id: "a", ts: 1 });

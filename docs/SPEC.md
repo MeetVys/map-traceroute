@@ -26,9 +26,11 @@ The computer is constantly sending and receiving packets. The app captures these
 
 - The UI shows a **world map**.
 - Each captured packet has a **source location** and a **destination location**, resolved from its source and destination IP addresses.
-- For every captured packet, the app draws a **line on the map** connecting source to destination.
-- The line is **animated**: it grows from the source point and ends at the destination point.
-- When a packet ages past 5 seconds, its line **fades out** and is removed from the map.
+- For every captured packet, the app draws an **animated arc** from source to destination.
+- The arc's **color encodes the protocol**: TCP, UDP, ICMP, Other each get their own color.
+- The arc's **height encodes direction**: outgoing arcs arch **high**, incoming arcs stay **low/flat**. You can see at a glance whether traffic is leaving or arriving.
+- The arc grows from source to destination when the packet is captured.
+- When a packet ages past 5 seconds, its arc **fades out** and is removed from the map.
 - Incoming and outgoing packets are both shown.
 
 ### Live packet list
