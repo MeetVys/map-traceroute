@@ -35,6 +35,8 @@ map-traceroute/
 │       ├── App.tsx
 │       ├── Map.tsx
 │       ├── Controls.tsx
+│       ├── PacketList.tsx
+│       ├── PacketRow.tsx
 │       ├── ws.ts
 │       └── types.ts
 └── data/
@@ -98,6 +100,8 @@ class RawPacket:
     ts: float          # epoch seconds, from packet metadata
     src_ip: str
     dst_ip: str
+    src_local: bool    # true if src_ip is one of our interface IPs
+    dst_local: bool    # true if dst_ip is one of our interface IPs
     direction: str     # "in" | "out"
     proto: str         # "tcp" | "udp" | "icmp" | "other"
     length: int        # bytes
@@ -176,8 +180,14 @@ class WindowedPacket:
     dst_ip: str
     src_lat: float
     src_lng: float
+    src_city: Optional[str]
+    src_country: Optional[str]
+    src_local: bool
     dst_lat: float
     dst_lng: float
+    dst_city: Optional[str]
+    dst_country: Optional[str]
+    dst_local: bool
     proto: str
     length: int
 
@@ -201,6 +211,16 @@ class WindowManager:
 - Internal storage: `collections.deque[WindowedPacket]` ordered by insertion (= by `ts`, since `time.time()` is monotonic within capture).
 - `max_size` enforced on `add` by popping head until under cap (drops oldest, emits `expire`).
 - `run_expiry` continues running even when capturer is stopped — drains the window naturally.
+
+### Local-side geo
+
+The user's interface IP is typically a private LAN address (e.g. `192.168.x.x`), which the geo DB cannot resolve. Without a fix, every packet the user sends/receives is dropped because `src` or `dst` `GeoPoint` is `None`.
+
+Fix: at server startup, call `ipinfo.io/json` (or `ifconfig.me`) **once** to learn the user's public IP, then resolve its geo via the local DB. Cache the result in `hub.local_geo: GeoPoint | None`.
+
+When the drain loop sees a packet where one side is local (flagged by `capturer` via `src_local` / `dst_local`), it substitutes `hub.local_geo` for that side's lat/lng/city/country, and sets `src_local` / `dst_local` = `true` in the DTO so the UI can show `(local)` in the list.
+
+If the one-time lookup fails (offline, no public IP), fall back to `(0, 0)` so the arc still renders; the list still shows `(local)`.
 
 ### 2.7 `main.py` — FastAPI app
 
@@ -233,14 +253,26 @@ async def startup():
 async def drain_queue():
     while True:
         raw = await app.state.queue.get()
-        src = app.state.geo.resolve(raw.src_ip)
-        dst = app.state.geo.resolve(raw.dst_ip)
+        # Resolve each side. If the side is the user's own machine,
+        # substitute hub.local_geo instead of the DB lookup (LAN IPs won't resolve).
+        src = hub.local_geo if raw.src_local else hub.geo.resolve(raw.src_ip)
+        dst = hub.local_geo if raw.dst_local else hub.geo.resolve(raw.dst_ip)
         if src is None or dst is None:
             continue
-        p = WindowedPacket(id=uuid4().hex, ts=raw.ts, ..., src_lat=src.lat, ...)
+        p = WindowedPacket(
+            id=uuid4().hex,
+            ts=raw.ts,
+            src_ip=raw.src_ip, src_lat=src.lat, src_lng=src.lng,
+            src_city=src.city, src_country=src.country, src_local=raw.src_local,
+            dst_ip=raw.dst_ip, dst_lat=dst.lat, dst_lng=dst.lng,
+            dst_city=dst.city, dst_country=dst.country, dst_local=raw.dst_local,
+            direction=raw.direction, proto=raw.proto, length=raw.length,
+        )
         await app.state.window.add(p)
         await broadcast_packet(p)
 ```
+
+`raw.src_local` / `raw.dst_local` come from the capturer's `local_ips` check; the capturer attaches those flags to `RawPacket`.
 
 #### Broadcast helpers
 
@@ -309,10 +341,18 @@ async def ws(ws: WebSocket):
   "direction": "in",
   "proto": "tcp",
   "length": 1460,
-  "src": { "ip": "1.2.3.4", "lat": 37.77, "lng": -122.41, "city": "SF", "country": "US" },
-  "dst": { "ip": "5.6.7.8", "lat": 51.50, "lng": -0.12, "city": "London", "country": "GB" }
+  "src": {
+    "ip": "1.2.3.4", "lat": 37.77, "lng": -122.41,
+    "city": "SF", "country": "US", "local": false
+  },
+  "dst": {
+    "ip": "192.168.1.10", "lat": 37.39, "lng": -122.08,
+    "city": "Mountain View", "country": "US", "local": true
+  }
 }
 ```
+
+`local: true` on a side means the IP belongs to the user's own machine. The UI shows `(local)` for that side in the packet list instead of the city/country.
 
 ### 2.9 Error handling
 
@@ -350,6 +390,7 @@ export type GeoRef = {
   lng: number;
   city?: string;
   country?: string;
+  local: boolean;
 };
 
 export type PacketDTO = {
@@ -495,6 +536,51 @@ The actual grown endpoint = `lerp(src, dst, growProgress(p))`.
 - Hard cap: render max 500 arcs. If `packets.size > 500`, drop oldest from render list (not from state — state is server-authoritative).
 - Single `requestAnimationFrame` loop; do not re-render React every frame. The deck.gl layer reads from a ref and animates via `updateTriggers`.
 
+### 3.9 `PacketList.tsx` — live packet list
+
+Docked to the bottom of the viewport, fixed height `~240px`, scrollable body.
+
+**Layout:**
+
+```
+┌ Live packets (last 5s)                           N active ┐
+├ dir │ source              │ destination          │ proto  bytes  age ┤
+│ ↑ out│ 192.168.1.10       │ 1.1.1.1              │ tcp    1460  0.1 │
+│      │ (local)            │ Sydney, AU           │                  │
+│ ↓ in │ 151.101.1.69       │ 192.168.1.10         │ tcp     512  0.4 │
+│      │ London, GB         │ (local)              │                  │
+└───────────────────────────────────────────────────────────┘
+```
+
+**Data source:** the same `Map<id, PacketState>` the map renders from. No new WebSocket state.
+
+**Behavior:**
+
+- Sort by `ts` descending (newest on top).
+- Row uses `direction` glyph + matching color (cyan for `out`, amber for `in`).
+- Source / destination cell shows the IP on line 1, and either `(local)` or `"city, country"` on line 2. If `city` or `country` is missing, fall back to `"Unknown"`.
+- `age` cell updates live at ~4 Hz (driven by the same rAF tick as the map).
+- On `expiredAt`, the row fades opacity 1 → 0 over 500 ms, then the row unmounts.
+- **Virtualization:** render only the first 200 rows; beyond that, show `"+ N more hidden"` footer. Prevents DOM blowup during traffic bursts.
+
+**Props:**
+
+```ts
+type Props = {
+  packets: Map<string, PacketState>;
+  tick: number;   // re-render trigger from App's rAF loop
+};
+```
+
+### 3.10 `PacketRow.tsx`
+
+Memoized (`React.memo`) per-packet row. Re-renders only when:
+
+- `expiredAt` becomes set (for fade), or
+- The `ageBucket` (seconds, integer) changes.
+
+Age is recomputed from `performance.now() - addedAt` on every render but the component is guarded by a cheap comparator so rows whose age bucket hasn't changed are skipped.
+
 ### 3.9 `package.json`
 
 ```json
@@ -608,3 +694,4 @@ Clean exit on Ctrl+C: `trap 'kill $SERVER_PID' INT TERM`.
 - **Geo DB:** DB-IP City Lite (CC-BY 4.0, no signup, monthly `.mmdb` download). Attribution credit required in UI.
 - **Root privilege:** `run.sh` launches the Python server via `sudo`. One password prompt per run. Accepted as v1 UX.
 - **IPv6:** Scapy filter and DB-IP both support it. No extra code; test as part of vertical slice.
+- **Local geo:** One-shot `ipinfo.io/json` lookup at startup to get the user's public IP, then resolved via the local DB. Cached in `hub.local_geo`. Used whenever a side is flagged `local`.

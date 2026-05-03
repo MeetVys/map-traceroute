@@ -31,6 +31,14 @@ The computer is constantly sending and receiving packets. The app captures these
 - When a packet ages past 5 seconds, its line **fades out** and is removed from the map.
 - Incoming and outgoing packets are both shown.
 
+### Live packet list
+
+- Below the map, the UI shows a **live packet list** — a Wireshark-style table of every packet currently in the 5-second window.
+- Columns: **direction** (in/out), **source** (IP + "city, country"), **destination** (IP + "city, country"), **protocol**, **bytes**, **age** (seconds since captured).
+- Newest packets on top. A row disappears when its packet expires, with a short fade-out.
+- If a source or destination is the user's own machine, the location column shows `(local)` instead of a city.
+- Only routable packets are listed — same stream that appears on the map.
+
 ## How the user runs it
 
 This is a **local tool**. The user clones the GitHub repo and runs it on their own machine.

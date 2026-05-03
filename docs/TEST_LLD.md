@@ -157,8 +157,8 @@ def make_capturer(local_ips={"192.168.1.10"}):
 
 | Test | Input | Expected |
 |------|-------|----------|
-| `test_outbound_packet` | `IP(src="192.168.1.10", dst="1.1.1.1")/TCP()` | one packet captured, `direction == "out"`, `proto == "tcp"` |
-| `test_inbound_packet` | `IP(src="1.1.1.1", dst="192.168.1.10")/UDP()` | one captured, `direction == "in"`, `proto == "udp"` |
+| `test_outbound_packet` | `IP(src="192.168.1.10", dst="1.1.1.1")/TCP()` | one captured, `direction == "out"`, `proto == "tcp"`, `src_local == True`, `dst_local == False` |
+| `test_inbound_packet` | `IP(src="1.1.1.1", dst="192.168.1.10")/UDP()` | one captured, `direction == "in"`, `proto == "udp"`, `src_local == False`, `dst_local == True` |
 | `test_loopback_dropped` | `IP(src="127.0.0.1", dst="127.0.0.1")/TCP()` | nothing captured |
 | `test_private_both_ends_dropped` | `IP(src="192.168.1.10", dst="10.0.0.5")/TCP()` | nothing captured |
 | `test_multicast_dropped` | `IP(src="192.168.1.10", dst="224.0.0.1")/UDP()` | nothing captured |
@@ -219,6 +219,8 @@ def client(monkeypatch, tmp_path):
 | `test_start_flips_status` | Connect, send `{type: "start"}` | Receives `{type: "status", data: {capturing: true}}` |
 | `test_packet_broadcast` | Start, inject packet with known IPs | Receives `{type: "packet", data: {...}}` with correct lat/lng from tiny.mmdb |
 | `test_packet_unknown_ip_dropped` | Start, inject packet with `203.0.113.1` | No `packet` message within 100ms |
+| `test_local_side_uses_local_geo` | Preset `hub.local_geo = GeoPoint(0, 0, "Home", "US")`. Inject packet with `src_local=True`. | DTO has `src.local == true`, `src.city == "Home"`, `src.lat == 0`. |
+| `test_packet_fields_include_city_country` | Inject known IP packet | DTO has non-null `src.city`, `src.country`, `dst.city`, `dst.country`. |
 | `test_expire_broadcast` | Inject packet with `ts = now - 6` | Within `tick+ε`, receives `{type: "expire", data: {id: ...}}` |
 | `test_stop_keeps_expiry_running` | Inject, send `stop`, wait window | Status becomes false, but `expire` still fires |
 | `test_second_client_snapshot` | Client A connects + injects 1 packet. Client B connects. | Client B's snapshot contains that packet |
@@ -268,7 +270,23 @@ Mocks `WSClient` module so we can push messages manually.
 | `start click sends start` | Click Start | `ws.send` called with `{type:"start"}` |
 | `error message renders` | Emit `{type:"error", data:{message:"x"}}` | `getByText("x")` |
 
-### 4.4 `Map.test.ts` (pure functions only)
+### 4.4 `PacketList.test.tsx`
+
+Rendered with RTL. Uses the same `PacketState` shape as `App.tsx`.
+
+| Test | Setup | Assertion |
+|------|-------|-----------|
+| `renders one row per packet` | `packets.size === 3` | Three rows in the tbody. |
+| `newest on top` | Insert packets with `ts` 10, 20, 30 | Row order top → bottom: 30, 20, 10. |
+| `shows (local) for local side` | Packet with `src.local: true` | Row source cell contains `"(local)"`. |
+| `shows "city, country" otherwise` | Packet with `src.city = "London"`, `src.country = "GB"` | Cell contains `"London, GB"`. |
+| `missing city falls back to Unknown` | Packet with `src.city === undefined` | Cell contains `"Unknown"`. |
+| `row fades out on expiry` | Set `expiredAt` then advance 250ms | Row's computed opacity is between 0.4 and 0.6. |
+| `row removed after fade` | Set `expiredAt` then advance 600ms | Row no longer in the DOM. |
+| `overflow footer shown above 200` | 250 packets | Exactly 200 rows + one `+ 50 more hidden` footer. |
+| `direction glyph correct` | Packets with `"in"` and `"out"` | Two different glyphs/colors rendered. |
+
+### 4.5 `Map.test.ts` (pure functions only)
 
 Only the helpers — deck.gl render is not tested (WebGL in jsdom is not useful).
 

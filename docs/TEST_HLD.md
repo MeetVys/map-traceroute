@@ -37,8 +37,8 @@ Pure-logic tests, no sockets, no root, no real `.mmdb`.
 |--------|-----------|
 | `net.py` | Returns a non-empty set. Skips loopback interface name variants. |
 | `geo.py` | Fixture `.mmdb` (tiny, hand-built). Private IPs → `None`. Unknown IPs → `None`. Known IPs → `GeoPoint`. LRU cache is used. |
-| `capturer.py` | Direction classification (local→remote = `out`, remote→local = `in`). Private/loopback filter. Proto detection. No actual `sniff()` — we call `_handle` directly with crafted Scapy packets. |
-| `window.py` | `add` + `run_expiry` drops packets older than window. `max_size` evicts oldest. `snapshot` returns insertion order. `on_expire` callback fires once per expired packet. |
+| `capturer.py` | Direction classification (local→remote = `out`, remote→local = `in`). Private/loopback filter. Proto detection. `src_local` / `dst_local` flags set correctly. No actual `sniff()` — we call `_handle` directly with crafted Scapy packets. |
+| `window.py` | `add` + `run_expiry` drops packets older than window. `max_size` evicts oldest. `snapshot` returns insertion order. `on_expire` callback fires once per expired packet. `WindowedPacket` carries city/country/local fields through untouched. |
 
 ### Unit — frontend (vitest + React Testing Library)
 
@@ -48,6 +48,8 @@ Pure-logic tests, no sockets, no root, no real `.mmdb`.
 | `App.tsx` | `packet` message adds to map. `expire` sets `expiredAt`. GC deletes faded packets. `status` updates button state. |
 | `Controls.tsx` | Start disabled when capturing. Stop disabled when not. Click fires the right callback. |
 | `Map.tsx` | `colorWithAlpha` ramps 1→0 over fade window. `lerp` endpoints during grow. |
+| `PacketList.tsx` | Renders one row per packet. Newest on top. `(local)` label used when `local: true`. `"city, country"` used otherwise. Row disappears when packet leaves the map. Row count capped at 200 with overflow footer. |
+| `PacketRow.tsx` | Memoization: rerender only on `expiredAt` change or age-bucket change. Direction glyph + color correct. Missing city/country falls back to `Unknown`. |
 
 ### Integration — backend
 
@@ -57,7 +59,8 @@ FastAPI's `TestClient` + a stub `Capturer` that we drive from the test.
 |----------|-----------|
 | Client connects | Receives `snapshot` (empty) + `status {capturing: false}`. |
 | Client sends `start` without root | Receives `error {code: "no_sudo"}` (simulate via monkeypatch). |
-| Stub capturer emits a raw packet | Client receives `packet` with matching geo. |
+| Stub capturer emits a raw packet | Client receives `packet` with matching geo, including `city`, `country`, and `local` fields on both sides. |
+| Stub capturer emits a packet where `src_local=true` | The DTO's `src.local` is `true` and its lat/lng come from `hub.local_geo`, not the DB lookup. |
 | Wait > `WINDOW_SECONDS` | Client receives `expire` for that packet id. |
 | Client sends `stop` | `status {capturing: false}`. Expiry continues. |
 | Second client connects mid-session | Gets correct `snapshot` of live packets. |

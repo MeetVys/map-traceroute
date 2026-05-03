@@ -14,7 +14,7 @@ Everything runs on the user's machine. There are three parts: a **packet capture
 | **Geo resolver** | Turns an IP into `{lat, lng, city, country}`. Uses a local IP-to-geo database so no external calls are made. |
 | **Window manager** | Holds captured packets in memory. Drops anything older than 5 seconds. Runs continuously after Start — does not stop when capture stops. |
 | **Web server** | Serves the UI and streams packet events to the browser over WebSocket. Exposes `start` and `stop` controls. |
-| **Browser UI** | Renders the world map, draws animated lines for each packet, fades them out on expiry. Has Start / Stop buttons. |
+| **Browser UI** | Renders the world map (arcs) **and a live packet list** below it, both driven by the same packet stream. Start / Stop buttons. |
 
 ## Data flow
 
@@ -30,8 +30,10 @@ Everything runs on the user's machine. There are three parts: a **packet capture
                                                                         |
                                                                         v
                                                                   [Browser UI]
-                                                                   (map + lines)
+                                                                  (map + list)
 ```
+
+The packet list and the map are fed from the **same** in-memory `Map<id, PacketState>` on the client. No extra server stream or duplicated state.
 
 ## Packet event (server -> UI)
 
@@ -40,10 +42,20 @@ Everything runs on the user's machine. There are three parts: a **packet capture
   "id": "uuid",
   "ts": 1714761600.123,
   "direction": "in | out",
-  "src": { "ip": "1.2.3.4", "lat": 37.77, "lng": -122.41 },
-  "dst": { "ip": "5.6.7.8", "lat": 51.50, "lng": -0.12 }
+  "proto": "tcp | udp | icmp | other",
+  "length": 1460,
+  "src": {
+    "ip": "1.2.3.4", "lat": 37.77, "lng": -122.41,
+    "city": "San Francisco", "country": "US", "local": false
+  },
+  "dst": {
+    "ip": "5.6.7.8", "lat": 51.50, "lng": -0.12,
+    "city": "London", "country": "GB", "local": false
+  }
 }
 ```
+
+`city` and `country` come from the geo DB (`null` if missing). `local: true` marks the user's own machine — the list shows `(local)` instead of a city.
 
 ## Control messages (UI -> server)
 
