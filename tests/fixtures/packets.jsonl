@@ -1,0 +1,3 @@
+{"ts_offset": 0.0, "src_ip": "8.8.8.8", "dst_ip": "1.1.1.1", "direction": "in", "proto": "tcp", "length": 512}
+{"ts_offset": 0.05, "src_ip": "1.1.1.1", "dst_ip": "151.101.1.69", "direction": "out", "proto": "udp", "length": 80}
+{"ts_offset": 0.1, "src_ip": "151.101.1.69", "dst_ip": "8.8.8.8", "direction": "in", "proto": "tcp", "length": 1460}
