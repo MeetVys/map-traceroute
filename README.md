@@ -1,8 +1,14 @@
 # Map Traceroute
 
-A local tool that captures your computer's network packets in real time and draws animated arcs between source and destination on a world map. Incoming and outgoing packets, 5-second moving window.
+Ever wondered where in the world your laptop is actually talking to? Right now, even while you're reading this, your machine is quietly swapping thousands of packets with servers scattered across every continent — handshakes for your browser tabs, background syncs you forgot about, DNS queries flying out the door — and you can't see a single one of them.
 
-macOS only.
+**Map Traceroute makes all of that visible.**
+
+It's a little local tool that taps into your network interface, grabs every IP packet going in and out, looks up where each remote endpoint lives on the planet, and paints an animated arc from **you** to **them** on a world map — in real time. The arcs are color-coded by protocol (blue for TCP, green for UDP, magenta for ICMP, gray for everything else), they arch high for outgoing traffic and stay low for incoming, and each one lingers for exactly five seconds before fading away. Below the map, a Wireshark-style live feed lists every packet with source, destination, city, country, bytes, age. Three switchable themes (console-dark, space-blue, topographic-paper) let you pick whatever aesthetic suits your mood.
+
+No cloud. No telemetry. No accounts. Everything — packet capture, geo lookup, rendering — runs entirely on your machine, so your traffic never leaves it. One command (`./run.sh`) sets it all up, including the first-time download of a free offline geo database, and opens the UI in your browser.
+
+Currently macOS-only (packet capture uses BPF, which needs `sudo`).
 
 ## Run
 
