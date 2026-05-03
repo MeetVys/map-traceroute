@@ -46,7 +46,7 @@ export function MapView({ packets }: Props) {
     };
   }, []);
 
-  const [countries, setCountries] = useState<unknown>(null);
+  const [countries, setCountries] = useState<any>(null);
   useEffect(() => {
     fetch("/countries.geojson")
       .then((r) => r.json())

@@ -35,13 +35,23 @@ fi
 npm run build
 popd >/dev/null
 
-# 5. Start server under sudo (packet capture needs root on macOS)
+# 5. Start server under sudo (packet capture needs root on macOS).
+# Prompt for password up front so the browser isn't opened before uvicorn starts.
+echo "Requesting sudo for packet capture..."
+sudo -v
+
 trap 'kill $SERVER_PID 2>/dev/null || true' INT TERM
 sudo -E .venv/bin/python -m uvicorn backend.main:app \
   --host 127.0.0.1 --port 8765 &
 SERVER_PID=$!
 
-sleep 1
+# Wait for server to accept connections before opening the browser.
+for _ in $(seq 1 50); do
+  if curl -sf -o /dev/null "http://127.0.0.1:8765/"; then
+    break
+  fi
+  sleep 0.1
+done
 open "http://localhost:8765" || true
 
 wait $SERVER_PID
